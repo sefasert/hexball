@@ -10,29 +10,12 @@ export class StartScene extends BaseScene {
   }
 
   create() {
-    // If no team selected yet, stay in TEAM_SELECT (React UI handles it)
     if (!useGameStore.getState().selectedTeam) {
       useGameStore.getState().setGameState('TEAM_SELECT');
-    } else {
-      useGameStore.getState().setGameState('START');
+      return;
     }
-
-    this.startKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-
-    if (useGameStore.getState().selectedTeam) {
-      const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-      enterKey.once('down', () => this._startGame());
-      this.startKey.once('down', () => this._startGame());
-      this.input.once('pointerdown', () => this._startGame());
-    }
-
-    // "Maça Başla" veya GROUP_STAGE → START geçişini izle
-    const unsub = useGameStore.subscribe((s) => {
-      if (s.gameState === 'START') {
-        unsub();
-        this.time.delayedCall(50, () => this._startGame());
-      }
-    });
+    // Direkt maça geç — bekleme yok
+    this.time.delayedCall(50, () => this._startGame());
   }
 
   private _startGame() {

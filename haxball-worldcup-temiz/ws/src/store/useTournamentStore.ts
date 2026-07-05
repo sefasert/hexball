@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Team, TEAMS } from '@/game/teams';
+import { REAL_GROUP_DATA } from '@/game/wc2026data';
 
 export interface GroupTeamStat {
   team: Team;
@@ -59,13 +60,36 @@ function makeStats(teams: Team[]): GroupTeamStat[] {
   return teams.map((t) => ({ team: t, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0 }));
 }
 
-function makeFixtures(teams: Team[], playerTeam: Team): Fixture[] {
+function makeFixtures(teams: Team[], playerTeam: Team, groupId: string): Fixture[] {
+  const realData = REAL_GROUP_DATA[groupId];
+  // Gerçek fikstür sırasını kullan — oyuncunun maçları gerçek takvime göre gelir
+  if (realData) {
+    const all = realData.fixtures.map((f, i) => {
+      const home = teams.find(t => t.id === f.home)!;
+      const away = teams.find(t => t.id === f.away)!;
+      if (!home || !away) return null;
+      const isPlayerMatch = home.id === playerTeam.id || away.id === playerTeam.id;
+      return { id: `f${i}`, home, away, isPlayerMatch, hg: f.hg, ag: f.ag };
+    }).filter(Boolean) as Array<{ id: string; home: Team; away: Team; isPlayerMatch: boolean; hg: number; ag: number }>;
+
+    // Oyuncunun ilk maçının index'ini bul
+    const firstPlayerIdx = all.findIndex(f => f.isPlayerMatch);
+
+    return all.map((f, i) => {
+      // Oyuncunun ilk maçından ÖNCE gelen maçlar: gerçek sonuçla önceden oynanmış say
+      // Oyuncunun maçı ve sonrasındaki tüm maçlar: başlangıçta boş
+      if (!f.isPlayerMatch && i < firstPlayerIdx) {
+        return { id: f.id, home: f.home, away: f.away, isPlayerMatch: false, homeGoals: f.hg, awayGoals: f.ag, played: true };
+      }
+      return { id: f.id, home: f.home, away: f.away, isPlayerMatch: f.isPlayerMatch, homeGoals: null, awayGoals: null, played: false };
+    });
+  }
+  // Fallback: manuel oluştur
   const fixtures: Fixture[] = [];
   let id = 0;
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      const home = teams[i];
-      const away = teams[j];
+      const home = teams[i], away = teams[j];
       const isPlayerMatch = home.id === playerTeam.id || away.id === playerTeam.id;
       fixtures.push({ id: `f${id++}`, home, away, homeGoals: null, awayGoals: null, played: false, isPlayerMatch });
     }
@@ -84,11 +108,23 @@ function applyResult(stats: GroupTeamStat[], homeId: string, awayId: string, hg:
   else { h.drawn++; h.points++; a.drawn++; a.points++; }
 }
 
-function simScore(): [number, number] {
-  const goals = () => Math.random() < 0.5 ? 0 : Math.random() < 0.5 ? 1 : Math.random() < 0.5 ? 2 : 3;
-  let h = goals(), a = goals();
-  // Berabere durumunda random kazanan (golden goal)
-  if (h === a) Math.random() > 0.5 ? h++ : a++;
+function simScore(hStrength = 70, aStrength = 70): [number, number] {
+  // Strength farkına göre beklenen gol dağılımı
+  const total = hStrength + aStrength;
+  const hAdv = hStrength / total;
+  const avgGoals = 2.5;
+  const hExpected = avgGoals * hAdv * 1.1; // ev avantajı
+  const aExpected = avgGoals * (1 - hAdv);
+  const randGoals = (expected: number) => {
+    const r = Math.random();
+    if (r < 0.20) return 0;
+    if (r < 0.45) return Math.round(expected * 0.5);
+    if (r < 0.75) return Math.round(expected);
+    if (r < 0.92) return Math.round(expected * 1.5);
+    return Math.round(expected * 2);
+  };
+  const h = Math.max(0, randGoals(hExpected));
+  const a = Math.max(0, randGoals(aExpected));
   return [h, a];
 }
 
@@ -135,9 +171,16 @@ function nextRound(current: TournamentPhase): TournamentPhase {
   return ROUND_ORDER[Math.min(idx + 1, ROUND_ORDER.length - 1)];
 }
 
-function roundLabel(r: TournamentPhase) {
-  const map: Record<string, string> = { R32: 'Son 32', R16: 'Son 16', QF: 'Çeyrek Final', SF: 'Yarı Final', F: 'Final' };
-  return map[r] ?? r;
+const ROUND_LABELS: Record<string, Record<string, string>> = {
+  R32: { tr: 'Son 32',       en: 'Round of 32',    fr: 'Huitièmes de finale', de: 'Achtelfinale',     es: 'Dieciseisavos'   },
+  R16: { tr: 'Son 16',       en: 'Round of 16',    fr: 'Seizième de finale',  de: 'Sechzehntelfinale',es: 'Octavos'         },
+  QF:  { tr: 'Çeyrek Final', en: 'Quarter-Final',  fr: 'Quart de finale',     de: 'Viertelfinale',    es: 'Cuartos'         },
+  SF:  { tr: 'Yarı Final',   en: 'Semi-Final',     fr: 'Demi-finale',         de: 'Halbfinale',       es: 'Semifinales'     },
+  F:   { tr: 'Final',        en: 'Final',          fr: 'Finale',              de: 'Finale',           es: 'Final'           },
+};
+
+function roundLabel(r: TournamentPhase, lang = 'tr'): string {
+  return ROUND_LABELS[r]?.[lang] ?? ROUND_LABELS[r]?.['en'] ?? r;
 }
 export { roundLabel };
 
@@ -153,13 +196,19 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
 
   initGroup(playerTeam, groupId) {
     const teams = TEAMS.filter((t) => t.group === groupId);
+    const fixtures = makeFixtures(teams, playerTeam, groupId);
+    // Gerçek sonuçları stats'a uygula (oyuncunun maçı hariç zaten played:true geldi)
+    const stats = makeStats(teams);
+    fixtures.filter(f => f.played).forEach(f => {
+      applyResult(stats, f.home.id, f.away.id, f.homeGoals!, f.awayGoals!);
+    });
     set({
       active: true,
       phase: 'GROUP',
       groupId,
       playerTeam,
-      stats: makeStats(teams),
-      fixtures: makeFixtures(teams, playerTeam),
+      stats,
+      fixtures,
       koMatches: [],
       eliminated: false,
     });
@@ -195,13 +244,9 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
       const teams = TEAMS.filter(t => t.group === g);
       const gStats = makeStats(teams);
       // Strength bazlı basit simülasyon
-      const fixtures = makeFixtures(teams, teams[0]); // dummy playerTeam
+      const fixtures = makeFixtures(teams, teams[0], g);
       for (const f of fixtures) {
-        const hStrength = f.home.strength;
-        const aStrength = f.away.strength;
-        const hAdv = hStrength / (hStrength + aStrength);
-        const hg = Math.random() < hAdv ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 2);
-        const ag = Math.random() < (1 - hAdv) ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 2);
+        const [hg, ag] = simScore(f.home.strength, f.away.strength);
         applyResult(gStats, f.home.id, f.away.id, hg, ag);
       }
       allStats[g] = gStats;
@@ -283,16 +328,46 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
     set({ koMatches: [...newMatches, ...nextMatches], phase: next });
   },
 
-  // Sadece şu an oynanmamış ve oyuncunun oynamadığı maçları simüle et
+  // Oyuncu maçını oynadıktan sonra çağrılır.
+  // Bir sonraki oyuncu maçına kadar sıradaki AI maçlarını simüle edip played:true yapar,
+  // gerçek veriden (wc2026data) skorları alır; yoksa random üretir.
   simulateRound() {
-    const { fixtures, stats } = get();
-    const newStats = stats.map((s) => ({ ...s }));
-    const newFixtures = fixtures.map((f) => {
-      if (f.played || f.isPlayerMatch) return f;
-      const [hg, ag] = simScore();
+    const { fixtures, stats, playerTeam, groupId } = get();
+    const realData = REAL_GROUP_DATA[groupId];
+
+    // Bir sonraki oyuncu maçının index'ini bul (henüz oynanmamış)
+    const nextPlayerIdx = fixtures.findIndex(f => f.isPlayerMatch && !f.played);
+
+    // Oynanması gereken AI maçlarını belirle:
+    // son played index'inden sonra, nextPlayerIdx'e kadar (hariç) olan played:false AI maçları
+    let lastPlayedIdx = -1;
+    for (let i = 0; i < fixtures.length; i++) {
+      if (fixtures[i].played) lastPlayedIdx = i;
+    }
+
+    const toSimulate = fixtures
+      .map((f, i) => ({ f, i }))
+      .filter(({ f, i }) => !f.played && !f.isPlayerMatch && (nextPlayerIdx === -1 || i < nextPlayerIdx));
+
+    if (toSimulate.length === 0) return;
+
+    const newStats = stats.map(s => ({ ...s }));
+    const newFixtures = fixtures.map(f => ({ ...f }));
+
+    for (const { f, i } of toSimulate) {
+      // Gerçek veriyi kullan — original index ile eşleştir
+      let hg: number, ag: number;
+      if (realData) {
+        const realF = realData.fixtures[i];
+        hg = realF ? realF.hg : simScore()[0];
+        ag = realF ? realF.ag : simScore()[1];
+      } else {
+        [hg, ag] = simScore();
+      }
+      newFixtures[i] = { ...f, homeGoals: hg, awayGoals: ag, played: true };
       applyResult(newStats, f.home.id, f.away.id, hg, ag);
-      return { ...f, homeGoals: hg, awayGoals: ag, played: true };
-    });
+    }
+
     set({ fixtures: newFixtures, stats: newStats });
   },
 

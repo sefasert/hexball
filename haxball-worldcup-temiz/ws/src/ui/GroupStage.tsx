@@ -2,6 +2,8 @@
 import React from 'react';
 import { useTournamentStore, GroupTeamStat, Fixture } from '@/store/useTournamentStore';
 import { useGameStore } from '@/store/useGameStore';
+import { useLangStore } from '@/store/useLangStore';
+import { teamName } from '@/game/teams';
 
 export type GroupView = 'table' | 'fixtures' | 'result';
 
@@ -28,12 +30,15 @@ function Standing({ s, isPlayer }: { s: GroupTeamStat; isPlayer: boolean }) {
   );
 }
 
-function FixtureRow({ f }: { f: Fixture }) {
+function FixtureRow({ f, revealed }: { f: Fixture; revealed: boolean }) {
+  const showScore = f.played && revealed;
   return (
     <div className={`flex items-center justify-between px-4 py-2 rounded-xl mb-2 ${f.isPlayerMatch ? 'bg-yellow-500/20 border border-yellow-500/40' : 'bg-white/5 border border-white/10'}`}>
       <span className="text-white font-bold text-sm w-24 text-right">{f.home.flag} {f.home.abbr}</span>
       <span className="text-white/60 text-xs mx-3">
-        {f.played ? <span className="text-white font-black text-base">{f.homeGoals} – {f.awayGoals}</span> : 'vs'}
+        {showScore
+          ? <span className="text-white font-black text-base">{f.homeGoals} – {f.awayGoals}</span>
+          : <span className="text-white/40">vs</span>}
       </span>
       <span className="text-white font-bold text-sm w-24 text-left">{f.away.abbr} {f.away.flag}</span>
     </div>
@@ -43,6 +48,7 @@ function FixtureRow({ f }: { f: Fixture }) {
 export const GroupStage: React.FC<Props> = ({ view, onPlay, onNext }) => {
   const { stats, fixtures, playerTeam, groupId } = useTournamentStore();
   const { selectedTeam, isHome } = useGameStore();
+  const { t, lang } = useLangStore();
 
   const sorted = [...stats].sort((a, b) =>
     b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf
@@ -54,24 +60,24 @@ export const GroupStage: React.FC<Props> = ({ view, onPlay, onNext }) => {
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-[#0a0a1a] to-[#0d1f2d] select-none overflow-auto py-8">
       <div className="flex flex-col items-center gap-1 mb-6">
-        <span className="text-4xl font-black text-white tracking-tight">⚽ Grup {groupId}</span>
-        <span className="text-white/50 text-sm font-semibold tracking-widest uppercase">Grup Aşaması</span>
+        <span className="text-4xl font-black text-white tracking-tight">⚽ {t.colTeam === 'Team' ? 'Group' : 'Grup'} {groupId}</span>
+        <span className="text-white/50 text-sm font-semibold tracking-widest uppercase">{t.groupStage}</span>
       </div>
 
       <div className="w-full max-w-xl px-4 flex flex-col gap-6">
         {/* Puan Tablosu */}
         <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md">
-          <div className="px-4 py-2 bg-white/10 text-white/60 text-xs font-bold uppercase tracking-widest">Puan Tablosu</div>
+          <div className="px-4 py-2 bg-white/10 text-white/60 text-xs font-bold uppercase tracking-widest">{t.standings}</div>
           <table className="w-full">
             <thead>
               <tr className="text-white/40 text-xs border-b border-white/10">
-                <th className="py-1 px-3 text-left">Takım</th>
-                <th className="py-1 px-3">O</th>
-                <th className="py-1 px-3">G</th>
-                <th className="py-1 px-3">B</th>
-                <th className="py-1 px-3">M</th>
-                <th className="py-1 px-3">Av</th>
-                <th className="py-1 px-3">P</th>
+                <th className="py-1 px-3 text-left">{t.colTeam}</th>
+                <th className="py-1 px-3">{t.colP}</th>
+                <th className="py-1 px-3">{t.colW}</th>
+                <th className="py-1 px-3">{t.colD}</th>
+                <th className="py-1 px-3">{t.colL}</th>
+                <th className="py-1 px-3">{t.colGD}</th>
+                <th className="py-1 px-3">{t.colPts}</th>
               </tr>
             </thead>
             <tbody>
@@ -96,8 +102,13 @@ export const GroupStage: React.FC<Props> = ({ view, onPlay, onNext }) => {
 
         {/* Fikstür */}
         <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md p-4">
-          <div className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">Maçlar</div>
-          {fixtures.map((f) => <FixtureRow key={f.id} f={f} />)}
+          <div className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">{t.matches}</div>
+          {fixtures.map((f, idx) => {
+            // Bir maçın skoru ancak kendisinden önceki tüm maçlar oynanmış ise gösterilir.
+            // Oyuncunun kendi maçı henüz oynanmamışsa (isPlayerMatch && !played) önceki sayılmaz.
+            const prevAllDone = fixtures.slice(0, idx).every((prev) => prev.played);
+            return <FixtureRow key={f.id} f={f} revealed={prevAllDone} />;
+          })}
         </div>
 
         {/* Aksiyon Butonu */}
@@ -106,22 +117,22 @@ export const GroupStage: React.FC<Props> = ({ view, onPlay, onNext }) => {
             onClick={onPlay}
             className="w-full py-4 bg-green-500 hover:bg-green-400 text-white font-black text-lg rounded-2xl active:scale-95 transition-all cursor-pointer shadow-xl"
           >
-            ▶ Maça Başla: {playerFixture.home.flag} {playerFixture.home.abbr} vs {playerFixture.away.abbr} {playerFixture.away.flag}
+            {t.playMatch}: {playerFixture.home.flag} {playerFixture.home.abbr} vs {playerFixture.away.abbr} {playerFixture.away.flag}
           </button>
         )}
 
         {allDone && (
           <div className="flex flex-col items-center gap-3">
-            <div className="text-white/60 text-sm font-bold uppercase tracking-widest">Grup Tamamlandı</div>
+            <div className="text-white/60 text-sm font-bold uppercase tracking-widest">{t.groupDone}</div>
             <div className="text-white font-black text-xl">
-              {sorted[0].team.id === playerTeam?.id ? '🏆 Gruptan Çıktın!' :
-               sorted[1].team.id === playerTeam?.id ? '✅ Gruptan Çıktın!' : '❌ Elendin'}
+              {sorted[0].team.id === playerTeam?.id ? t.qualified1 :
+               sorted[1].team.id === playerTeam?.id ? t.qualified2 : t.eliminated}
             </div>
             <button
               onClick={onNext}
               className="px-10 py-3 bg-white text-gray-900 font-black rounded-2xl hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
             >
-              Devam Et
+              {t.continueGroup}
             </button>
           </div>
         )}

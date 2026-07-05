@@ -179,7 +179,7 @@ export class GameScene extends BaseScene {
 
     this.gameTimer = this.time.addEvent({
       delay: 1000,
-      loop: true,  // sınırsız döngü — timeLeft kontrolü biter
+      loop: true,
       callback: () => {
         const current = useGameStore.getState().timeLeft;
         const next = current - 1;
@@ -193,6 +193,33 @@ export class GameScene extends BaseScene {
   }
 
   private _endMatch() {
+    const { isOvertime } = useGameStore.getState();
+
+    // Normal süre bitti → her zaman uzatma başlat (1–600 sn arası rastgele, maks 10 dk)
+    if (!isOvertime) {
+      const extraSeconds = Math.floor(Math.random() * 300) + 30; // 30 sn – 5,5 dk
+      useGameStore.getState().setIsOvertime(true);
+      useGameStore.getState().setTimeLeft(extraSeconds);
+      this.gameTimer = this.time.addEvent({
+        delay: 1000,
+        loop: true,
+        callback: () => {
+          const current = useGameStore.getState().timeLeft;
+          const next = current - 1;
+          useGameStore.getState().setTimeLeft(next);
+          if (next <= 0) {
+            this.gameTimer.destroy();
+            this._finalizeMatch();
+          }
+        },
+      });
+      return;
+    }
+
+    this._finalizeMatch();
+  }
+
+  private _finalizeMatch() {
     const { scoreRed, scoreBlue } = useGameStore.getState();
     if (scoreRed > scoreBlue) useGameStore.getState().setWinner('RED');
     else if (scoreBlue > scoreRed) useGameStore.getState().setWinner('BLUE');
@@ -241,7 +268,14 @@ export class GameScene extends BaseScene {
     this._checkGoal();
     this._rotateBall(dt);
 
-    this.playerGlow.setAlpha(0);
+    // Glow her zaman oyuncunun üzerinde — alpha X'e göre
+    this.playerGlow.setPosition(this.player.sprite.x, this.player.sprite.y);
+    if (this.keys.redKick.isDown) {
+      const pulse = 0.5 + 0.5 * Math.sin(_time * 0.015);
+      this.playerGlow.setAlpha(pulse);
+    } else {
+      this.playerGlow.setAlpha(0);
+    }
   }
 
   private _updateAIKickoff(ai: PlayerState, dt: number) {
@@ -726,7 +760,6 @@ export class GameScene extends BaseScene {
     this.time.delayedCall(HAXBALL.GOAL_PAUSE, () => {
       const s = useGameStore.getState();
       if (s.gameState === 'GAMEOVER') return;
-      // scorer = golü atan, santraya gidecek = golü yiyen (karşı taraf)
       const golYiyen: 'RED' | 'BLUE' = scorer === 'RED' ? 'BLUE' : 'RED';
       this._resetPositions(golYiyen);
       useGameStore.getState().setGameState('PLAYING');

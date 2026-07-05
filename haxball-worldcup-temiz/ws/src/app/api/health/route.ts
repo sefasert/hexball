@@ -8,11 +8,17 @@ const corsHeaders = {
 
 export async function GET() {
   return NextResponse.json(
-    { success: true, status: 'ok', timestamp: new Date().toISOString() },
-    { headers: corsHeaders }
+    { success: true, message: 'ok' },
+    {
+      status: 200,
+      headers: corsHeaders,
+    }
   )
 }
 
 export async function OPTIONS() {
-  return new NextResponse(null, { headers: corsHeaders })
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  })
 }

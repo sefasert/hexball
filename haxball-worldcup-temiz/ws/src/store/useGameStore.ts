@@ -8,22 +8,25 @@ interface GameState {
   scoreBlue: number;
   gameState: GameStatus;
   timeLeft: number;
+  isOvertime: boolean; // uzatma modu aktif mi
+
   lastGoalTeam: 'RED' | 'BLUE' | null;
   winner: 'RED' | 'BLUE' | 'DRAW' | null;
   selectedTeam: Team | null;
   aiTeam: Team | null;
-  isHome: boolean; // true = ev (kırmızı/sol), false = deplasman (mavi/sağ)
+  isHome: boolean;
 
   // Actions
   goalScored: (team: 'RED' | 'BLUE') => void;
   setGameState: (state: GameStatus) => void;
   setTimeLeft: (t: number) => void;
+  setIsOvertime: (v: boolean) => void;
   setWinner: (w: 'RED' | 'BLUE' | 'DRAW') => void;
   setSelectedTeam: (team: Team) => void;
   setAiTeam: (team: Team) => void;
   setIsHome: (v: boolean) => void;
   reset: () => void;
-  resetMatch: () => void; // sadece skor/timer sıfırla, takım/mod koru
+  resetMatch: () => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -31,6 +34,7 @@ export const useGameStore = create<GameState>((set) => ({
   scoreBlue: 0,
   gameState: 'TEAM_SELECT',
   timeLeft: 180,
+  isOvertime: false,
   lastGoalTeam: null,
   winner: null,
   selectedTeam: null,
@@ -47,6 +51,7 @@ export const useGameStore = create<GameState>((set) => ({
 
   setGameState: (s) => set({ gameState: s }),
   setTimeLeft: (t) => set({ timeLeft: t }),
+  setIsOvertime: (v) => set({ isOvertime: v }),
   setWinner: (w) => set({ winner: w, gameState: 'GAMEOVER' }),
   setSelectedTeam: (team) => set({ selectedTeam: team }),
   setAiTeam: (team) => set({ aiTeam: team }),
@@ -58,6 +63,7 @@ export const useGameStore = create<GameState>((set) => ({
       scoreBlue: 0,
       gameState: 'GROUP_STAGE',
       timeLeft: 180,
+      isOvertime: false,
       lastGoalTeam: null,
       winner: null,
       selectedTeam: s.selectedTeam,
@@ -65,14 +71,13 @@ export const useGameStore = create<GameState>((set) => ({
       isHome: s.isHome,
     })),
 
-
-
   reset: () =>
     set((s) => ({
       scoreRed: 0,
       scoreBlue: 0,
       gameState: 'TEAM_SELECT',
       timeLeft: 180,
+      isOvertime: false,
       lastGoalTeam: null,
       winner: null,
       selectedTeam: s.selectedTeam,

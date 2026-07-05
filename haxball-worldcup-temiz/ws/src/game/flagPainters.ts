@@ -32,8 +32,18 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
 
   // ── GRUP A ───────────────────────────────────────────────────────────────
 
-  mex(ctx, s) { // Yeşil-Beyaz-Kırmızı dikey
+  mex(ctx, s) { // Meksika — yeşil-beyaz-kırmızı dikey, ortada kartal arması
     vStripes(ctx, s, ['#006847', '#FFFFFF', '#CE1126']);
+    // Kartal arması (basit kartal silüeti)
+    const cx = s/2, cy = s/2;
+    circle(ctx, cx, cy, s*0.14, '#8B6914');
+    circle(ctx, cx, cy, s*0.1, '#228B22');
+    // Kartal başı
+    circle(ctx, cx, cy - s*0.08, s*0.04, '#8B6914');
+    // Kanatlar
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath(); ctx.ellipse(cx - s*0.1, cy, s*0.08, s*0.04, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + s*0.1, cy, s*0.08, s*0.04, 0.3, 0, Math.PI*2); ctx.fill();
   },
 
   cze(ctx, s) { // Beyaz üst, kırmızı alt, mavi üçgen solda
@@ -101,27 +111,38 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     vStripes(ctx, s, ['#FF0000', '#FFFFFF', '#FF0000']);
     // Akçaağaç yaprağı (basit)
     ctx.fillStyle = '#FF0000';
-    ctx.font = `bold ${s*0.55}px serif`;
+    ctx.font = `bold ${s*0.32}px serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('🍁', s/2, s/2);
   },
 
-  bih(ctx, s) { // Bosna — mavi zemin, sarı üçgen, beyaz yıldızlar
+  bih(ctx, s) { // Bosna — lacivert zemin, sarı üçgen, çapraz beyaz yıldızlar
     ctx.fillStyle = '#002395'; ctx.fillRect(0, 0, s, s);
-    ctx.beginPath(); ctx.moveTo(s*0.15,0); ctx.lineTo(s,s*0.85); ctx.lineTo(s,0);
+    ctx.beginPath(); ctx.moveTo(s*0.2, 0); ctx.lineTo(s, s*0.8); ctx.lineTo(s, 0);
     ctx.fillStyle = '#FECB00'; ctx.fill();
+    // Çapraz yıldız dizisi
+    for (let i = 0; i < 7; i++) {
+      const px = s*(0.08 + i*0.13), py = s*(0.06 + i*0.13);
+      ctx.save(); ctx.translate(px, py);
+      ctx.beginPath();
+      for (let j=0;j<5;j++){
+        const a=(j*4*Math.PI/5)-Math.PI/2, b=((j*4+2)*Math.PI/5)-Math.PI/2;
+        ctx.lineTo(Math.cos(a)*s*0.045, Math.sin(a)*s*0.045);
+        ctx.lineTo(Math.cos(b)*s*0.018, Math.sin(b)*s*0.018);
+      }
+      ctx.closePath(); ctx.fillStyle='#FFFFFF'; ctx.fill(); ctx.restore();
+    }
   },
 
-  qat(ctx, s) { // Katar — bordo + beyaz dişli
+  qat(ctx, s) { // Katar — beyaz sol (%28), bordo sağ, 9 dişli beyaz kenar
     ctx.fillStyle = '#8D1B3D'; ctx.fillRect(0, 0, s, s);
     ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, s*0.28, s);
-    // Dişli kenar
-    const teeth = 7, th = s / teeth;
+    const teeth = 9, th = s / teeth;
     for (let i = 0; i < teeth; i++) {
       ctx.fillStyle = '#8D1B3D';
       ctx.beginPath();
       ctx.moveTo(s*0.28, i*th);
-      ctx.lineTo(s*0.38, i*th + th/2);
+      ctx.lineTo(s*0.36, i*th + th/2);
       ctx.lineTo(s*0.28, (i+1)*th);
       ctx.fill();
     }
@@ -143,34 +164,50 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     ctx.lineTo(s/2, s*0.92); ctx.lineTo(s*0.06, s/2);
     ctx.fillStyle = '#FEDF00'; ctx.fill();
     circle(ctx, s/2, s/2, s*0.24, '#002776');
-    // Beyaz eğri şerit
+    // Beyaz eğri şerit (clip ile dairenin içinde)
     ctx.save();
     ctx.beginPath(); ctx.arc(s/2, s/2, s*0.24, 0, Math.PI*2); ctx.clip();
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(s*0.1, s*0.44, s*0.8, s*0.12);
-    ctx.restore();
-    // Şerit üstüne "ORDEM E PROGRESSO" simgesi
+    ctx.fillStyle = '#FFFFFF';
+    // Hafif eğimli şerit
+    ctx.save(); ctx.translate(s/2, s/2); ctx.rotate(-0.1);
+    ctx.fillRect(-s*0.24, -s*0.05, s*0.48, s*0.1);
+    ctx.restore(); ctx.restore();
+    // "ORDEM E PROGRESSO" yeşil yazı
+    ctx.save();
+    ctx.beginPath(); ctx.arc(s/2, s/2, s*0.24, 0, Math.PI*2); ctx.clip();
     ctx.fillStyle = '#009C3B';
-    ctx.font = `bold ${s*0.065}px sans-serif`;
+    ctx.font = `bold ${s*0.058}px sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('ORDEM E PROGRESSO', s/2, s/2);
+    ctx.save(); ctx.translate(s/2, s/2); ctx.rotate(-0.1);
+    ctx.fillText('ORDEM E PROGRESSO', 0, 0);
+    ctx.restore(); ctx.restore();
   },
 
-  hai(ctx, s) { // Haiti — mavi üst, kırmızı alt
+  hai(ctx, s) { // Haiti — mavi üst, kırmızı alt, ortada beyaz arma
     hStripes(ctx, s, ['#00209F', '#D21034']);
+    // Beyaz arma şeridi
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(s*0.22, s*0.38, s*0.56, s*0.24);
+    // Palmiye (basit)
+    ctx.fillStyle = '#228B22';
+    ctx.fillRect(s*0.48, s*0.4, s*0.04, s*0.18);
+    ctx.beginPath(); ctx.arc(s*0.5, s*0.42, s*0.1, Math.PI, 0); ctx.fillStyle='#228B22'; ctx.fill();
+    ctx.beginPath(); ctx.arc(s*0.5, s*0.44, s*0.08, 0, Math.PI); ctx.fill();
+    // Top ve bayrak direği
+    circle(ctx, s*0.5, s*0.5, s*0.04, '#8B0000');
   },
 
-  mar(ctx, s) { // Fas — kırmızı, yeşil yıldız
+  mar(ctx, s) { // Fas — kırmızı zemin, ortada dolu yeşil 5 köşeli yıldız
     ctx.fillStyle = '#C1272D'; ctx.fillRect(0, 0, s, s);
-    // Yeşil yıldız
     ctx.save(); ctx.translate(s/2, s/2);
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
       const a = (i * 4 * Math.PI / 5) - Math.PI/2;
-      const b = (i * 4 * Math.PI / 5 + 2*Math.PI/5) - Math.PI/2;
+      const b = (i * 4 * Math.PI / 5 + 2 * Math.PI / 5) - Math.PI/2;
       ctx.lineTo(Math.cos(a)*s*0.28, Math.sin(a)*s*0.28);
-      ctx.lineTo(Math.cos(b)*s*0.12, Math.sin(b)*s*0.12);
+      ctx.lineTo(Math.cos(b)*s*0.11, Math.sin(b)*s*0.11);
     }
-    ctx.closePath(); ctx.fillStyle = '#006233'; ctx.fill();
+    ctx.closePath();
+    ctx.fillStyle = '#006233'; ctx.fill();
     ctx.restore();
   },
 
@@ -183,12 +220,39 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
 
   // ── GRUP D ───────────────────────────────────────────────────────────────
 
-  usa(ctx, s) { // ABD — kırmızı-beyaz çizgiler, mavi köşe
+  usa(ctx, s) { // ABD — 13 şerit, mavi köşe, 50 yıldız (6x5 + 5x4 grid)
     for (let i = 0; i < 13; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#BF0A30' : '#FFFFFF';
       ctx.fillRect(0, i * (s/13), s, s/13 + 1);
     }
     ctx.fillStyle = '#002868'; ctx.fillRect(0, 0, s*0.45, s*0.54);
+    // 50 yıldız: 5 sıra 6'lı + 4 sıra 5'li = 50
+    const starR = s * 0.028;
+    const cols6 = 6, cols5 = 5, rows = 9;
+    const padX = s*0.045, padY = s*0.045;
+    const boxW = s*0.45 - padX*2, boxH = s*0.54 - padY*2;
+    const dx6 = boxW / (cols6 - 1), dy = boxH / (rows - 1);
+    const dx5 = boxW / (cols5 - 1);
+    for (let row = 0; row < rows; row++) {
+      const isSixRow = row % 2 === 0;
+      const cols = isSixRow ? cols6 : cols5;
+      const dx = isSixRow ? dx6 : dx5;
+      const offsetX = isSixRow ? 0 : dx6 / 2;
+      for (let col = 0; col < cols; col++) {
+        const x = padX + offsetX + col * dx;
+        const y = padY + row * dy;
+        ctx.save(); ctx.translate(x, y);
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (i*4*Math.PI/5) - Math.PI/2;
+          const b = ((i*4+2)*Math.PI/5) - Math.PI/2;
+          ctx.lineTo(Math.cos(a)*starR, Math.sin(a)*starR);
+          ctx.lineTo(Math.cos(b)*starR*0.4, Math.sin(b)*starR*0.4);
+        }
+        ctx.closePath(); ctx.fillStyle='#FFFFFF'; ctx.fill();
+        ctx.restore();
+      }
+    }
   },
 
   aus(ctx, s) { // Avustralya — lacivert zemin, sol üstte Union Jack, sağda Güney Haçı
@@ -298,11 +362,23 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     ctx.fillRect(s*0.3, 0, s*0.22, s);
   },
 
-  tun(ctx, s) { // Tunus — kırmızı, beyaz daire içinde ay-yıldız
+  tun(ctx, s) { // Tunus — kırmızı zemin, beyaz daire, kırmızı ay-yıldız
     ctx.fillStyle = '#E70013'; ctx.fillRect(0, 0, s, s);
-    circle(ctx, s/2, s/2, s*0.28, '#FFFFFF');
-    circle(ctx, s*0.44, s/2, s*0.18, '#E70013');
-    circle(ctx, s*0.52, s/2, s*0.13, '#FFFFFF');
+    circle(ctx, s/2, s/2, s*0.3, '#FFFFFF');
+    // Kırmızı ay
+    circle(ctx, s*0.46, s/2, s*0.18, '#E70013');
+    circle(ctx, s*0.54, s/2, s*0.14, '#FFFFFF');
+    // Kırmızı yıldız
+    ctx.save(); ctx.translate(s*0.6, s/2);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i*4*Math.PI/5) - Math.PI/2;
+      const b = ((i*4+2)*Math.PI/5) - Math.PI/2;
+      ctx.lineTo(Math.cos(a)*s*0.1, Math.sin(a)*s*0.1);
+      ctx.lineTo(Math.cos(b)*s*0.04, Math.sin(b)*s*0.04);
+    }
+    ctx.closePath(); ctx.fillStyle='#E70013'; ctx.fill();
+    ctx.restore();
   },
 
   // ── GRUP G ───────────────────────────────────────────────────────────────
@@ -311,17 +387,43 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     vStripes(ctx, s, ['#000000', '#FAE042', '#EF3340']);
   },
 
-  egy(ctx, s) { // Mısır — kırmızı-beyaz-siyah yatay
+  egy(ctx, s) { // Mısır — kırmızı-beyaz-siyah yatay, ortada altın Saladin kartalı
     hStripes(ctx, s, ['#CE1126', '#FFFFFF', '#000000']);
-    // Altın kartal
+    const cx = s/2, cy = s/2;
+    // Kartal gövde
     ctx.fillStyle = '#C09300';
-    ctx.font = `${s*0.35}px serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🦅', s/2, s/2);
+    ctx.beginPath(); ctx.ellipse(cx, cy, s*0.1, s*0.13, 0, 0, Math.PI*2); ctx.fill();
+    // Sol kanat
+    ctx.beginPath(); ctx.ellipse(cx - s*0.14, cy - s*0.02, s*0.12, s*0.06, -0.4, 0, Math.PI*2); ctx.fill();
+    // Sağ kanat
+    ctx.beginPath(); ctx.ellipse(cx + s*0.14, cy - s*0.02, s*0.12, s*0.06, 0.4, 0, Math.PI*2); ctx.fill();
+    // Baş
+    circle(ctx, cx, cy - s*0.12, s*0.05, '#C09300');
+    // Gaga
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath(); ctx.moveTo(cx, cy-s*0.1); ctx.lineTo(cx+s*0.04, cy-s*0.12); ctx.lineTo(cx, cy-s*0.14); ctx.fill();
+    // Kalkan (göğüs)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx-s*0.05, cy-s*0.06, s*0.1, s*0.1);
+    ctx.strokeStyle = '#C09300'; ctx.lineWidth = s*0.015;
+    ctx.strokeRect(cx-s*0.05, cy-s*0.06, s*0.1, s*0.1);
+    // Pençeler
+    ctx.strokeStyle = '#C09300'; ctx.lineWidth = s*0.02;
+    ctx.beginPath(); ctx.moveTo(cx-s*0.04, cy+s*0.12); ctx.lineTo(cx-s*0.08, cy+s*0.17); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+s*0.04, cy+s*0.12); ctx.lineTo(cx+s*0.08, cy+s*0.17); ctx.stroke();
   },
 
-  irn(ctx, s) { // İran — yeşil-beyaz-kırmızı yatay
+  irn(ctx, s) { // İran — yeşil-beyaz-kırmızı, ortada "الله" yazısı
     hStripes(ctx, s, ['#239F40', '#FFFFFF', '#DA0000']);
+    // Şerit kenarı ince bant
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, s*0.305, s, s*0.02);
+    ctx.fillStyle = '#DA0000'; ctx.fillRect(0, s*0.675, s, s*0.02);
+    // Ortada büyük "الله" yazısı
+    ctx.fillStyle = '#DA0000';
+    ctx.font = `bold ${s*0.28}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('الله', s/2, s/2);
   },
 
   nzl(ctx, s) { // Yeni Zelanda — lacivert, sol üst Union Jack, sağda 4 kırmızı yıldız
@@ -368,21 +470,63 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     }
   },
 
-  sau(ctx, s) { // Suudi Arabistan — yeşil, kılıç+yazı
+  sau(ctx, s) { // Suudi Arabistan — koyu yeşil, beyaz şehadet yazısı + kılıç
     ctx.fillStyle = '#006C35'; ctx.fillRect(0, 0, s, s);
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = `${s*0.18}px serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('☽', s/2, s*0.42);
-    ctx.fillRect(s*0.25, s*0.62, s*0.5, s*0.05); // kılıç
+    ctx.font = `bold ${s*0.14}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('لا إله إلا الله محمد رسول الله', s/2, s*0.42);
+    // Kılıç — yatay, ortada
+    const ky = s*0.68, klen = s*0.62, kx = (s - klen) / 2;
+    // Namlu
+    ctx.fillRect(kx, ky - s*0.022, klen*0.82, s*0.044);
+    // Uç (üçgen)
+    ctx.beginPath();
+    ctx.moveTo(kx + klen*0.82, ky - s*0.022);
+    ctx.lineTo(kx + klen,      ky);
+    ctx.lineTo(kx + klen*0.82, ky + s*0.022);
+    ctx.closePath(); ctx.fill();
+    // Sap koruyucu (dikey)
+    ctx.fillRect(kx + s*0.04, ky - s*0.055, s*0.03, s*0.11);
+    // Sap
+    ctx.fillRect(kx, ky - s*0.018, s*0.045, s*0.036);
   },
 
-  esp(ctx, s) { // İspanya — kırmızı-sarı-kırmızı yatay
-    hStripes(ctx, s, ['#AA151B', '#F1BF00', '#AA151B']);
-    // Sarı geniş
+  esp(ctx, s) { // İspanya — kırmızı(%25) sarı(%50) kırmızı(%25) + arma
+    // Şeritler
     ctx.fillStyle = '#AA151B'; ctx.fillRect(0, 0, s, s*0.25);
     ctx.fillStyle = '#F1BF00'; ctx.fillRect(0, s*0.25, s, s*0.5);
     ctx.fillStyle = '#AA151B'; ctx.fillRect(0, s*0.75, s, s*0.25);
+
+    // Arma merkezi: sarı bölgenin sol çeyreğinde
+    const cx = s*0.28, cy = s*0.5;
+
+    // Taç — armadan üstte
+    ctx.fillStyle = '#F6A800';
+    ctx.fillRect(cx - s*0.09, cy - s*0.22, s*0.18, s*0.05);
+    ctx.fillRect(cx - s*0.03, cy - s*0.27, s*0.06, s*0.06);
+    ctx.fillRect(cx - s*0.09, cy - s*0.27, s*0.04, s*0.04);
+    ctx.fillRect(cx + s*0.05, cy - s*0.27, s*0.04, s*0.04);
+
+    // Kalkan
+    const kw = s*0.2, kh = s*0.26, kx = cx - kw/2, ky = cy - s*0.13;
+    // Sol yarı — Kastilya kalesi (kırmızı + altın kale)
+    ctx.fillStyle = '#C8102E'; ctx.fillRect(kx, ky, kw/2, kh);
+    // Sağ yarı — León aslanı (beyaz + mor)
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(kx+kw/2, ky, kw/2, kh);
+    // Kale silueti sol
+    ctx.fillStyle = '#F6A800';
+    ctx.fillRect(kx+s*0.01, ky+s*0.02, s*0.04, s*0.07);
+    ctx.fillRect(kx+s*0.06, ky+s*0.02, s*0.03, s*0.04);
+    // Aslan mor nokta sağ
+    circle(ctx, kx+kw*0.75, ky+kh*0.45, s*0.025, '#722F8A');
+    // Kalkan kenarlığı
+    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = s*0.018;
+    ctx.strokeRect(kx, ky, kw, kh);
+    // Alt kısmı yuvarlat (basit yarım daire alt)
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath(); ctx.arc(cx, ky+kh, kw/2, 0, Math.PI); ctx.stroke();
   },
 
   uru(ctx, s) { // Uruguay — 9 yatay şerit, sol üstte güneş
@@ -449,10 +593,23 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
 
   // ── GRUP J ───────────────────────────────────────────────────────────────
 
-  alg(ctx, s) { // Cezayir — beyaz-yeşil dikey, kırmızı ay-yıldız
-    vStripes(ctx, s, ['#FFFFFF', '#006233']);
-    circle(ctx, s*0.46, s/2, s*0.2, '#D21034');
-    circle(ctx, s*0.54, s/2, s*0.15, '#FFFFFF');
+  alg(ctx, s) { // Cezayir — sol beyaz, sağ yeşil, ortada kırmızı ay-yıldız
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, s*0.5, s);
+    ctx.fillStyle = '#006233'; ctx.fillRect(s*0.5, 0, s*0.5, s);
+    // Kırmızı ay
+    circle(ctx, s*0.44, s/2, s*0.2, '#D21034');
+    circle(ctx, s*0.54, s/2, s*0.145, '#FFFFFF');
+    // Kırmızı yıldız
+    ctx.save(); ctx.translate(s*0.58, s/2 - s*0.05);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i*4*Math.PI/5) - Math.PI/2;
+      const b = ((i*4+2)*Math.PI/5) - Math.PI/2;
+      ctx.lineTo(Math.cos(a)*s*0.1, Math.sin(a)*s*0.1);
+      ctx.lineTo(Math.cos(b)*s*0.04, Math.sin(b)*s*0.04);
+    }
+    ctx.closePath(); ctx.fillStyle='#D21034'; ctx.fill();
+    ctx.restore();
   },
 
   arg(ctx, s) { // Arjantin — açık mavi-beyaz-açık mavi, Güneş May
@@ -525,12 +682,22 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     ctx.beginPath(); ctx.moveTo(s,0); ctx.lineTo(s*0.58,s/2); ctx.lineTo(s,s); ctx.closePath(); ctx.fill();
   },
 
-  por(ctx, s) { // Portekiz — yeşil-kırmızı dikey
+  por(ctx, s) { // Portekiz — sol yeşil (%38), sağ kırmızı, ortada arma
     ctx.fillStyle = '#006600'; ctx.fillRect(0, 0, s*0.38, s);
     ctx.fillStyle = '#FF0000'; ctx.fillRect(s*0.38, 0, s*0.62, s);
-    circle(ctx, s*0.38, s/2, s*0.18, '#FFD700');
-    circle(ctx, s*0.38, s/2, s*0.12, '#FFFFFF');
-    circle(ctx, s*0.38, s/2, s*0.07, '#003399');
+    // Arma: altın daire
+    ctx.beginPath(); ctx.arc(s*0.38, s/2, s*0.2, 0, Math.PI*2);
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = s*0.04; ctx.stroke();
+    // İç beyaz kalkan
+    ctx.fillStyle = '#FFFFFF';
+    const kx = s*0.38, ky = s/2;
+    ctx.fillRect(kx - s*0.1, ky - s*0.1, s*0.2, s*0.2);
+    // Mavi kalkan kenarları
+    ctx.strokeStyle = '#003399'; ctx.lineWidth = s*0.025;
+    ctx.strokeRect(kx - s*0.1, ky - s*0.1, s*0.2, s*0.2);
+    // 5 mavi nokta (quinas)
+    [[0,0],[s*0.07,0],[-s*0.07,0],[0,s*0.07],[0,-s*0.07]].forEach(([dx,dy]) =>
+      circle(ctx, kx+dx, ky+dy, s*0.025, '#003399'));
   },
 
   cod(ctx, s) { // Kongo DR — mavi zemin, sarı çapraz, kırmızı üçgen sol üst
@@ -559,17 +726,19 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
 
   // ── GRUP L ───────────────────────────────────────────────────────────────
 
-  cro(ctx, s) { // Hırvatistan — kırmızı-beyaz dama
-    ctx.fillStyle = '#FF0000'; ctx.fillRect(0, 0, s, s*0.5);
-    ctx.fillStyle = '#0038A8'; ctx.fillRect(0, s*0.5, s, s*0.5);
-    // Dama deseni
-    const sq = s / 6;
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 6; col++) {
+  cro(ctx, s) { // Hırvatistan — kırmızı-beyaz-mavi yatay, ortada dama kalkanı
+    hStripes(ctx, s, ['#FF0000', '#FFFFFF', '#0038A8']);
+    // Merkez dama kalkanı
+    const kw = s*0.44, kh = s*0.5, kx = (s-kw)/2, ky = (s-kh)/2;
+    const sq = kw/5;
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
         ctx.fillStyle = (row+col) % 2 === 0 ? '#FF0000' : '#FFFFFF';
-        ctx.fillRect(col*sq, row*sq + s*0.12, sq, sq);
+        ctx.fillRect(kx + col*sq, ky + row*(kh/5), sq, kh/5);
       }
     }
+    ctx.strokeStyle='#000000'; ctx.lineWidth=s*0.012;
+    ctx.strokeRect(kx, ky, kw, kh);
   },
 
   eng(ctx, s) { // İngiltere — beyaz, kırmızı St. George haçı
@@ -579,14 +748,41 @@ export const FLAG_PAINTERS: Record<string, FlagPainter> = {
     ctx.fillRect(s*0.38, 0, s*0.24, s);
   },
 
-  gha(ctx, s) { // Gana — kırmızı-sarı-yeşil yatay, siyah yıldız
+  gha(ctx, s) { // Gana — kırmızı-sarı-yeşil yatay, ortada siyah 5 köşeli yıldız
     hStripes(ctx, s, ['#CE1126', '#FCD116', '#006B3F']);
-    circle(ctx, s/2, s/2, s*0.12, '#000000');
+    ctx.save(); ctx.translate(s/2, s/2);
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i*4*Math.PI/5) - Math.PI/2;
+      const b = ((i*4+2)*Math.PI/5) - Math.PI/2;
+      ctx.lineTo(Math.cos(a)*s*0.18, Math.sin(a)*s*0.18);
+      ctx.lineTo(Math.cos(b)*s*0.07, Math.sin(b)*s*0.07);
+    }
+    ctx.closePath(); ctx.fillStyle='#000000'; ctx.fill();
+    ctx.restore();
   },
 
-  pan(ctx, s) { // Panama — kırmızı-mavi beyaz dört kare
+  pan(ctx, s) { // Panama — beyaz zemin, sol üst kırmızı, sağ alt mavi, yıldızlar
     ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, s, s);
     ctx.fillStyle = '#DA121A'; ctx.fillRect(0, 0, s/2, s/2);
     ctx.fillStyle = '#1C3F94'; ctx.fillRect(s/2, s/2, s/2, s/2);
+    // Mavi yıldız sol alt (beyaz karede)
+    ctx.save(); ctx.translate(s*0.25, s*0.75);
+    ctx.beginPath();
+    for (let i=0;i<5;i++){
+      const a=(i*4*Math.PI/5)-Math.PI/2, b=((i*4+2)*Math.PI/5)-Math.PI/2;
+      ctx.lineTo(Math.cos(a)*s*0.12,Math.sin(a)*s*0.12);
+      ctx.lineTo(Math.cos(b)*s*0.05,Math.sin(b)*s*0.05);
+    }
+    ctx.closePath(); ctx.fillStyle='#1C3F94'; ctx.fill(); ctx.restore();
+    // Kırmızı yıldız sağ üst (beyaz karede)
+    ctx.save(); ctx.translate(s*0.75, s*0.25);
+    ctx.beginPath();
+    for (let i=0;i<5;i++){
+      const a=(i*4*Math.PI/5)-Math.PI/2, b=((i*4+2)*Math.PI/5)-Math.PI/2;
+      ctx.lineTo(Math.cos(a)*s*0.12,Math.sin(a)*s*0.12);
+      ctx.lineTo(Math.cos(b)*s*0.05,Math.sin(b)*s*0.05);
+    }
+    ctx.closePath(); ctx.fillStyle='#DA121A'; ctx.fill(); ctx.restore();
   },
 };
